@@ -1,0 +1,79 @@
+<UserControl x:Class="ComicLayoutEditor.App.Controls.PagePrintControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:infra="clr-namespace:ComicLayoutEditor.App.Infrastructure"
+             mc:Ignorable="d">
+    <!-- Render no interactivo de una página (para imprimir / exportar / vista previa) -->
+    <Grid Background="White" ClipToBounds="True">
+        <ItemsControl ItemsSource="{Binding Panels}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Canvas ClipToBounds="True" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                    <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                    <Setter Property="Width" Value="{Binding Width}" />
+                    <Setter Property="Height" Value="{Binding Height}" />
+                    <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}" />
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <!-- Viñeta -->
+                    <Grid>
+                        <Grid ClipToBounds="True">
+                            <Image Source="{Binding ImageSource}"
+                                   Stretch="{Binding ImageStretch}"
+                                   RenderTransformOrigin="0.5,0.5">
+                                <Image.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="{Binding ImageRenderZoom}" ScaleY="{Binding ImageRenderZoom}" />
+                                        <TranslateTransform X="{Binding ImageTranslateX}" Y="{Binding ImageTranslateY}" />
+                                    </TransformGroup>
+                                </Image.RenderTransform>
+                            </Image>
+                        </Grid>
+                        <Rectangle Stroke="#88000000" StrokeThickness="1" />
+
+                        <!-- Bocadillos -->
+                        <ItemsControl ItemsSource="{Binding Balloons}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                    <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Width="{Binding Width}" Height="{Binding Height}">
+                                        <Canvas>
+                                            <Path Data="{Binding ThoughtBubblesGeometry}" Fill="White" Stroke="Black" StrokeThickness="1.5" />
+                                            <Path Data="{Binding OutlineGeometry}" Fill="White" Stroke="Black" StrokeThickness="1.5" />
+                                        </Canvas>
+                                        <TextBlock infra:RichTextRenderer.Runs="{Binding Runs}"
+                                                   FontFamily="{Binding FontFamilyValue}"
+                                                   FontSize="{Binding FontSize}"
+                                                   TextAlignment="{Binding TextAlignmentValue}"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>

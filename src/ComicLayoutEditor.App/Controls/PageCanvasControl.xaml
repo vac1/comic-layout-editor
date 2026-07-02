@@ -1,0 +1,96 @@
+<UserControl x:Class="ComicLayoutEditor.App.Controls.PageCanvasControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:ComicLayoutEditor.App.Controls"
+             mc:Ignorable="d"
+             Background="#4A4A4A"
+             Loaded="PageCanvasControl_Loaded"
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="22" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="22" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Esquina -->
+        <Border Grid.Row="0" Grid.Column="0" Background="#E0E0E0" BorderBrush="#B0B0B0" BorderThickness="0,0,1,1" />
+
+        <!-- Reglas en mm -->
+        <controls:RulerControl x:Name="TopRuler" Grid.Row="0" Grid.Column="1" Orientation="Horizontal"
+                               ClipToBounds="True" />
+        <controls:RulerControl x:Name="LeftRuler" Grid.Row="1" Grid.Column="0" Orientation="Vertical"
+                               ClipToBounds="True" />
+
+        <ScrollViewer x:Name="Scroller" Grid.Row="1" Grid.Column="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      PreviewMouseWheel="ScrollViewer_PreviewMouseWheel"
+                      ScrollChanged="Scroller_ScrollChanged">
+            <Grid Margin="40" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding Zoom}" ScaleY="{Binding Zoom}" />
+                </Grid.LayoutTransform>
+
+                <!-- Página con sombra -->
+                <Border x:Name="PageBorder" Background="White"
+                        Width="{Binding CurrentPage.PageWidthPx}"
+                        Height="{Binding CurrentPage.PageHeightPx}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.5" Color="Black" />
+                    </Border.Effect>
+
+                    <Grid x:Name="PageRoot" ClipToBounds="True">
+                        <!-- Superficie que capta clics en zona vacía -->
+                        <Rectangle x:Name="PageSurface" Fill="Transparent"
+                                   MouseLeftButtonDown="PageSurface_MouseLeftButtonDown"
+                                   MouseMove="PageSurface_MouseMove"
+                                   MouseLeftButtonUp="PageSurface_MouseLeftButtonUp" />
+
+                        <!-- Rejilla (bajo las viñetas) -->
+                        <controls:GridOverlay IsHitTestVisible="False"
+                                              GridSizePx="{Binding GridSizePx}"
+                                              Visibility="{Binding ShowGrid, Converter={StaticResource BoolToVis}}" />
+
+                        <!-- Viñetas -->
+                        <ItemsControl ItemsSource="{Binding CurrentPage.Panels}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                    <Setter Property="Canvas.Top" Value="{Binding Top}" />
+                                    <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}" />
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <controls:PanelControl />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Capa de superposición: marco de selección / nueva viñeta -->
+                        <Canvas IsHitTestVisible="False">
+                            <Rectangle x:Name="Marquee" Visibility="Collapsed"
+                                       Stroke="DodgerBlue" StrokeThickness="1" StrokeDashArray="4 2"
+                                       Fill="#330078D7" />
+                        </Canvas>
+                    </Grid>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

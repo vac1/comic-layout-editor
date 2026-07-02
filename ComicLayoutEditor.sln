@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E42F10A2-1F46-4978-804F-A2AF4D8191A9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComicLayoutEditor.App", "src\ComicLayoutEditor.App\ComicLayoutEditor.App.csproj", "{EC0BE75F-7726-41A2-8C97-30CE4CE8852D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComicLayoutEditor.Core", "src\ComicLayoutEditor.Core\ComicLayoutEditor.Core.csproj", "{E5AA798A-FFBC-4FD7-875C-FB5EFA1F77B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComicLayoutEditor.Tests", "src\ComicLayoutEditor.Tests\ComicLayoutEditor.Tests.csproj", "{398E8D4F-AB25-4BE2-B1F1-25F411C8A891}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EC0BE75F-7726-41A2-8C97-30CE4CE8852D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC0BE75F-7726-41A2-8C97-30CE4CE8852D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC0BE75F-7726-41A2-8C97-30CE4CE8852D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC0BE75F-7726-41A2-8C97-30CE4CE8852D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5AA798A-FFBC-4FD7-875C-FB5EFA1F77B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5AA798A-FFBC-4FD7-875C-FB5EFA1F77B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5AA798A-FFBC-4FD7-875C-FB5EFA1F77B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5AA798A-FFBC-4FD7-875C-FB5EFA1F77B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{398E8D4F-AB25-4BE2-B1F1-25F411C8A891}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{398E8D4F-AB25-4BE2-B1F1-25F411C8A891}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{398E8D4F-AB25-4BE2-B1F1-25F411C8A891}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{398E8D4F-AB25-4BE2-B1F1-25F411C8A891}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EC0BE75F-7726-41A2-8C97-30CE4CE8852D} = {E42F10A2-1F46-4978-804F-A2AF4D8191A9}
+		{E5AA798A-FFBC-4FD7-875C-FB5EFA1F77B2} = {E42F10A2-1F46-4978-804F-A2AF4D8191A9}
+		{398E8D4F-AB25-4BE2-B1F1-25F411C8A891} = {E42F10A2-1F46-4978-804F-A2AF4D8191A9}
+	EndGlobalSection
+EndGlobal
