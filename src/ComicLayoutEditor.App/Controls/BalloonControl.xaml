@@ -46,7 +46,26 @@
                      VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden"
                      SelectionChanged="TextEditor_SelectionChanged"
                      PreviewKeyDown="TextBox_PreviewKeyDown"
-                     LostKeyboardFocus="TextBox_LostKeyboardFocus" />
+                     LostKeyboardFocus="TextBox_LostKeyboardFocus">
+            <!-- Plantilla que centra verticalmente el contenido: RichTextBox ignora
+                 VerticalContentAlignment por defecto (el FlowDocument se apila arriba).
+                 Al dar VerticalAlignment al PART_ContentHost, el visor toma la altura
+                 de su contenido y queda centrado cuando el bocadillo es más alto. -->
+            <RichTextBox.Template>
+                <ControlTemplate TargetType="RichTextBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Focusable="False"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden" />
+                    </Border>
+                </ControlTemplate>
+            </RichTextBox.Template>
+        </RichTextBox>
 
         <!-- Cuerpo transparente para mover/seleccionar (desactivado al editar) -->
         <Thumb x:Name="MoveThumb" Cursor="SizeAll"

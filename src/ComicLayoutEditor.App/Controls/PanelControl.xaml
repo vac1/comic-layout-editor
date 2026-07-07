@@ -8,6 +8,9 @@
              Width="{Binding Width}"
              Height="{Binding Height}"
              AllowDrop="True"
+             Loaded="PanelControl_Loaded"
+             Unloaded="PanelControl_Unloaded"
+             DataContextChanged="PanelControl_DataContextChanged"
              DragOver="PanelControl_DragOver"
              Drop="PanelControl_Drop"
              PreviewMouseWheel="PanelControl_PreviewMouseWheel">
@@ -22,6 +25,19 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
                         <Rectangle Fill="White" Stroke="DodgerBlue" StrokeThickness="1.5" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo de los tiradores de escala de la imagen (modo de ajuste) -->
+        <Style x:Key="ImageHandleStyle" TargetType="Thumb">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Ellipse Fill="White" Stroke="#FF8C00" StrokeThickness="2" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -89,8 +105,12 @@
                    IsHitTestVisible="False"
                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}" />
 
-        <!-- Tiradores de redimensionado (solo visibles con la viñeta seleccionada) -->
-        <Grid Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}">
+        <!-- Borde naranja: indica que la viñeta está en modo de ajuste de imagen -->
+        <Rectangle x:Name="AdjustModeBorder" Stroke="#FF8C00" StrokeThickness="2" StrokeDashArray="2 2"
+                   IsHitTestVisible="False" Visibility="Collapsed" />
+
+        <!-- Tiradores de redimensionado del marco (visibilidad gestionada en código) -->
+        <Grid x:Name="ResizeHandlesGrid" Visibility="Collapsed">
             <Thumb Style="{StaticResource HandleStyle}" Tag="NW" Cursor="SizeNWSE"
                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-5,-5,0,0"
                    DragStarted="ResizeThumb_DragStarted" DragDelta="ResizeThumb_DragDelta" DragCompleted="Thumb_DragCompleted" />
@@ -115,6 +135,22 @@
             <Thumb Style="{StaticResource HandleStyle}" Tag="SE" Cursor="SizeNWSE"
                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-5,-5"
                    DragStarted="ResizeThumb_DragStarted" DragDelta="ResizeThumb_DragDelta" DragCompleted="Thumb_DragCompleted" />
+        </Grid>
+
+        <!-- Tiradores de escala de la imagen (solo en modo de ajuste; visibilidad en código) -->
+        <Grid x:Name="ImageAdjustGrid" Visibility="Collapsed">
+            <Thumb Style="{StaticResource ImageHandleStyle}" Tag="NW" Cursor="SizeNWSE"
+                   HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-6,-6,0,0"
+                   DragStarted="ImageScaleThumb_DragStarted" DragDelta="ImageScaleThumb_DragDelta" DragCompleted="ImageScaleThumb_DragCompleted" />
+            <Thumb Style="{StaticResource ImageHandleStyle}" Tag="NE" Cursor="SizeNESW"
+                   HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0"
+                   DragStarted="ImageScaleThumb_DragStarted" DragDelta="ImageScaleThumb_DragDelta" DragCompleted="ImageScaleThumb_DragCompleted" />
+            <Thumb Style="{StaticResource ImageHandleStyle}" Tag="SW" Cursor="SizeNESW"
+                   HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-6,0,0,-6"
+                   DragStarted="ImageScaleThumb_DragStarted" DragDelta="ImageScaleThumb_DragDelta" DragCompleted="ImageScaleThumb_DragCompleted" />
+            <Thumb Style="{StaticResource ImageHandleStyle}" Tag="SE" Cursor="SizeNWSE"
+                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-6,-6"
+                   DragStarted="ImageScaleThumb_DragStarted" DragDelta="ImageScaleThumb_DragDelta" DragCompleted="ImageScaleThumb_DragCompleted" />
         </Grid>
     </Grid>
 </UserControl>

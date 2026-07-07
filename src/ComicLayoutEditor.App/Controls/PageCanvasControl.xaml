@@ -41,17 +41,27 @@
                     <ScaleTransform ScaleX="{Binding Zoom}" ScaleY="{Binding Zoom}" />
                 </Grid.LayoutTransform>
 
-                <!-- Página con sombra -->
-                <Border x:Name="PageBorder" Background="White"
+                <!-- Sombra de la página, en una capa aparte: si el efecto envuelve el
+                     contenido, transformar las imágenes de las viñetas (pan/zoom)
+                     provoca fallos de repintado (caché del efecto sin invalidar). -->
+                <Border Background="White" IsHitTestVisible="False"
                         Width="{Binding CurrentPage.PageWidthPx}"
                         Height="{Binding CurrentPage.PageHeightPx}">
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.5" Color="Black" />
                     </Border.Effect>
+                </Border>
 
+                <!-- Página (contenido, sin efecto) -->
+                <Border x:Name="PageBorder" Background="White"
+                        Width="{Binding CurrentPage.PageWidthPx}"
+                        Height="{Binding CurrentPage.PageHeightPx}">
                     <Grid x:Name="PageRoot" ClipToBounds="True">
                         <!-- Superficie que capta clics en zona vacía -->
                         <Rectangle x:Name="PageSurface" Fill="Transparent"
+                                   AllowDrop="True"
+                                   DragOver="PageSurface_DragOver"
+                                   Drop="PageSurface_Drop"
                                    MouseLeftButtonDown="PageSurface_MouseLeftButtonDown"
                                    MouseMove="PageSurface_MouseMove"
                                    MouseLeftButtonUp="PageSurface_MouseLeftButtonUp" />

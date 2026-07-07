@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ComicLayoutEditor.App.Infrastructure;
@@ -111,6 +112,35 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isCreatePanelMode;
+
+    /// <summary>
+    /// Modo de ajuste de imagen: mientras está activo, arrastrar el cuerpo de una
+    /// viñeta con imagen desplaza (pan) la imagen dentro del marco y la rueda o los
+    /// tiradores de las esquinas la escalan, sin necesidad de pulsar Alt.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isAdjustImageMode;
+
+    // Los dos modos son mutuamente excluyentes.
+    partial void OnIsCreatePanelModeChanged(bool value)
+    {
+        if (value)
+        {
+            IsAdjustImageMode = false;
+        }
+    }
+
+    partial void OnIsAdjustImageModeChanged(bool value)
+    {
+        if (value)
+        {
+            IsCreatePanelMode = false;
+        }
+    }
+
+    /// <summary>Sale del modo de ajuste de imagen (p. ej. con Escape).</summary>
+    [RelayCommand]
+    private void ExitAdjustImageMode() => IsAdjustImageMode = false;
 
     [ObservableProperty]
     private double _zoom = 1.0;
@@ -860,6 +890,108 @@ public partial class MainWindowViewModel : ObservableObject
             }));
     }
 
+    /// <summary>
+    /// Crea una viñeta nueva en el lienzo que contiene la imagen indicada, con un
+    /// tamaño por defecto acorde a la relación de aspecto de la imagen y centrada
+    /// en el punto de soltado. Creación + imagen se agrupan en una sola acción de
+    /// deshacer.
+    /// </summary>
+    public void CreatePanelWithImage(double centerXpx, double centerYpx, string sourceFile)
+    {
+        var page = CurrentPage;
+        if (page is null)
+        {
+            return;
+        }
+
+        ImageRef imported;
+        try
+        {
+            imported = _assetStore.Import(sourceFile);
+        }
+        catch (IOException)
+        {
+            return;
+        }
+
+        var rotation = ExifOrientation.GetRotationDegrees(sourceFile);
+        var rect = DefaultImagePanelRect(page, centerXpx, centerYpx, sourceFile, rotation);
+
+        var vm = new PanelViewModel(new Panel(), page);
+        vm.SetPixelRect(rect);
+        vm.ZIndex = page.Panels.Count == 0 ? 0 : page.Panels.Max(p => p.ZIndex) + 1;
+
+        Undo.Do(new DelegateAction(
+            redo: () =>
+            {
+                page.AddPanel(vm);
+                vm.SetImage(imported);
+                vm.SetImageRotation(rotation);
+                SelectOnly(vm);
+                RefreshCommandStates();
+            },
+            undo: () =>
+            {
+                page.RemovePanel(vm);
+                SelectedPanels.Remove(vm);
+                vm.IsSelected = false;
+                RefreshCommandStates();
+            }));
+    }
+
+    /// <summary>
+    /// Rectángulo por defecto (en píxeles de página) para una viñeta que aloja una
+    /// imagen recién soltada: ocupa como mucho el 40 % del lado menor de la página,
+    /// respeta la relación de aspecto de la imagen (con su rotación aplicada) y se
+    /// centra en el punto indicado sin salirse de la página.
+    /// </summary>
+    private static RectD DefaultImagePanelRect(
+        PageViewModel page, double centerXpx, double centerYpx, string sourceFile, int rotation)
+    {
+        double pageW = page.PageWidthPx;
+        double pageH = page.PageHeightPx;
+
+        double aspect = 1.0; // ancho/alto; 1 = cuadrado por defecto si no se lee el tamaño.
+        try
+        {
+            var frame = BitmapFrame.Create(
+                new Uri(sourceFile), BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
+            double iw = frame.PixelWidth;
+            double ih = frame.PixelHeight;
+            if (rotation is 90 or 270)
+            {
+                (iw, ih) = (ih, iw);
+            }
+            if (iw > 0 && ih > 0)
+            {
+                aspect = iw / ih;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or NotSupportedException or ArgumentException)
+        {
+            // Se usa el cuadrado por defecto.
+        }
+
+        double target = Math.Min(pageW, pageH) * 0.4;
+        double w, h;
+        if (aspect >= 1)
+        {
+            w = target;
+            h = target / aspect;
+        }
+        else
+        {
+            h = target;
+            w = target * aspect;
+        }
+        w = Math.Min(w, pageW);
+        h = Math.Min(h, pageH);
+
+        double x = Math.Max(0, Math.Min(centerXpx - w / 2, pageW - w));
+        double y = Math.Max(0, Math.Min(centerYpx - h / 2, pageH - h));
+        return new RectD(x, y, w, h);
+    }
+
     private bool CanDelete() => HasSelection || SelectedBalloon is not null;
 
     [RelayCommand(CanExecute = nameof(CanDelete))]
@@ -1494,12 +1626,53 @@ public partial class MainWindowViewModel : ObservableObject
             undo: () => panel.SetImageTransform(start.Zoom, start.Offset)));
     }
 
-    public void PanImage(PanelViewModel panel, double dxPx, double dyPx)
+    /// <summary>
+    /// Desplaza (pan) la imagen. <paramref name="totalDxPx"/>/<paramref name="totalDyPx"/> son el
+    /// desplazamiento TOTAL del ratón desde el inicio del gesto, por lo que se aplica de forma
+    /// absoluta sobre el desplazamiento inicial capturado en <see cref="BeginImageAdjust"/>
+    /// (así el punto bajo el cursor queda fijo, 1:1).
+    /// </summary>
+    public void PanImage(PanelViewModel panel, double totalDxPx, double totalDyPx)
     {
-        var offset = panel.Model.ImageOffset;
-        var nx = offset.X + dxPx / Math.Max(1, panel.Width);
-        var ny = offset.Y + dyPx / Math.Max(1, panel.Height);
+        var startOffset = _imageAdjustStart is { } start && ReferenceEquals(start.Panel, panel)
+            ? start.Offset
+            : panel.Model.ImageOffset;
+        var nx = startOffset.X + totalDxPx / Math.Max(1, panel.Width);
+        var ny = startOffset.Y + totalDyPx / Math.Max(1, panel.Height);
         panel.SetImageTransform(panel.Model.ImageZoom, new PointD(nx, ny));
+    }
+
+    /// <summary>
+    /// Fija el zoom de la imagen conservando el desplazamiento actual. Pensado para el
+    /// arrastre de los tiradores de escala; el paso de deshacer lo agrupa la interacción
+    /// (<see cref="BeginImageAdjust"/>/<see cref="EndImageAdjust"/>).
+    /// </summary>
+    public void SetImageZoom(PanelViewModel panel, double zoom)
+        => panel.SetImageTransform(Math.Clamp(zoom, 0.1, 10.0), panel.Model.ImageOffset);
+
+    private bool CanResetImageTransform() => PrimaryPanel?.HasImage == true;
+
+    /// <summary>Restablece el encuadre de la imagen (zoom 100 %, centrada).</summary>
+    [RelayCommand(CanExecute = nameof(CanResetImageTransform))]
+    private void ResetImageTransform()
+    {
+        var panel = PrimaryPanel;
+        if (panel?.Model.Image is null)
+        {
+            return;
+        }
+
+        var oldZoom = panel.Model.ImageZoom;
+        var oldOffset = panel.Model.ImageOffset;
+        if (Math.Abs(oldZoom - 1.0) < Epsilon
+            && Math.Abs(oldOffset.X) < 0.0001 && Math.Abs(oldOffset.Y) < 0.0001)
+        {
+            return;
+        }
+
+        Undo.Do(new DelegateAction(
+            redo: () => panel.SetImageTransform(1.0, default),
+            undo: () => panel.SetImageTransform(oldZoom, oldOffset)));
     }
 
     /// <summary>Aplica un factor de zoom a la imagen y lo registra como paso de deshacer.</summary>
@@ -1552,6 +1725,7 @@ public partial class MainWindowViewModel : ObservableObject
         ImportImageCommand.NotifyCanExecuteChanged();
         RemoveImageCommand.NotifyCanExecuteChanged();
         RotateImageCommand.NotifyCanExecuteChanged();
+        ResetImageTransformCommand.NotifyCanExecuteChanged();
         BringToFrontCommand.NotifyCanExecuteChanged();
         SendToBackCommand.NotifyCanExecuteChanged();
         AlignLeftCommand.NotifyCanExecuteChanged();

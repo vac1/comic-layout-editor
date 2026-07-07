@@ -87,6 +87,7 @@ public partial class PanelViewModel : ObservableObject
     {
         SyncModelBounds();
         OnPropertyChanged(nameof(ImageTranslateX));
+        OnPropertyChanged(nameof(ImageRenderZoom));
         foreach (var balloon in Balloons)
         {
             balloon.RecomputeFromModel();
@@ -97,6 +98,7 @@ public partial class PanelViewModel : ObservableObject
     {
         SyncModelBounds();
         OnPropertyChanged(nameof(ImageTranslateY));
+        OnPropertyChanged(nameof(ImageRenderZoom));
         foreach (var balloon in Balloons)
         {
             balloon.RecomputeFromModel();
@@ -112,16 +114,40 @@ public partial class PanelViewModel : ObservableObject
 
     public ImageSource? ImageSource { get; private set; }
 
-    /// <summary>Modo de estirado de WPF derivado del ajuste del modelo.</summary>
+    /// <summary>
+    /// Modo de estirado del control <c>Image</c>. Cover y Contain usan <c>Uniform</c>
+    /// (que nunca recorta contra los límites del Image); el efecto "cubrir" se logra
+    /// con <see cref="ImageBaseScale"/> en el RenderTransform, de modo que el recorte
+    /// lo aplique el marco (Grid con ClipToBounds) y el pan revele las zonas ocultas.
+    /// </summary>
     public Stretch ImageStretch => _model.ImageFit switch
     {
-        ImageFit.Cover => Stretch.UniformToFill,
-        ImageFit.Contain => Stretch.Uniform,
         ImageFit.Stretch => Stretch.Fill,
-        _ => Stretch.UniformToFill
+        _ => Stretch.Uniform // Cover y Contain
     };
 
-    public double ImageRenderZoom => _model.ImageZoom;
+    /// <summary>
+    /// Escala base que lleva el ajuste <c>Uniform</c> del control al modo deseado:
+    /// para Cover amplía hasta cubrir el marco; para Contain/Stretch vale 1. Se combina
+    /// con el zoom del usuario en <see cref="ImageRenderZoom"/>.
+    /// </summary>
+    public double ImageBaseScale
+    {
+        get
+        {
+            if (_model.ImageFit != ImageFit.Cover
+                || ImageSource is not { Width: > 0, Height: > 0 } src
+                || Width <= 0 || Height <= 0)
+            {
+                return 1.0;
+            }
+            var uniform = Math.Min(Width / src.Width, Height / src.Height);
+            var cover = Math.Max(Width / src.Width, Height / src.Height);
+            return uniform > 0 ? cover / uniform : 1.0;
+        }
+    }
+
+    public double ImageRenderZoom => ImageBaseScale * _model.ImageZoom;
     public double ImageTranslateX => _model.ImageOffset.X * Width;
     public double ImageTranslateY => _model.ImageOffset.Y * Height;
 
@@ -137,6 +163,9 @@ public partial class PanelViewModel : ObservableObject
     {
         _model.ImageFit = fit;
         OnPropertyChanged(nameof(ImageStretch));
+        OnPropertyChanged(nameof(ImageRenderZoom));
+        // El desplazamiento válido depende del ajuste: re-acotarlo para el nuevo modo.
+        SetImageTransform(_model.ImageZoom, _model.ImageOffset);
     }
 
     /// <summary>Rotación actual de la imagen (grados horarios, múltiplos de 90).</summary>
@@ -154,14 +183,53 @@ public partial class PanelViewModel : ObservableObject
         OnPropertyChanged(nameof(ImageRotation));
     }
 
-    /// <summary>Aplica el zoom y desplazamiento internos de la imagen.</summary>
+    /// <summary>Aplica el zoom y desplazamiento internos de la imagen (el pan se acota al marco).</summary>
     public void SetImageTransform(double zoom, PointD offset)
     {
         _model.ImageZoom = zoom;
-        _model.ImageOffset = offset;
+        _model.ImageOffset = ClampOffset(zoom, offset);
         OnPropertyChanged(nameof(ImageRenderZoom));
         OnPropertyChanged(nameof(ImageTranslateX));
         OnPropertyChanged(nameof(ImageTranslateY));
+    }
+
+    /// <summary>
+    /// Acota el desplazamiento (pan) de la imagen para que no pueda sacarse del marco:
+    /// si la imagen renderizada es mayor que la viñeta, se impide que aparezcan huecos;
+    /// si es menor, se impide que salga del marco. El desplazamiento se expresa como
+    /// fracción del tamaño de la viñeta.
+    /// </summary>
+    private PointD ClampOffset(double zoom, PointD offset)
+    {
+        if (ImageSource is not { Width: > 0, Height: > 0 } src || Width <= 0 || Height <= 0)
+        {
+            return offset;
+        }
+
+        double iw = src.Width;
+        double ih = src.Height;
+
+        // Tamaño de la imagen ya ajustada al marco (Cover/Contain/Stretch) y con el zoom.
+        double renderW, renderH;
+        if (_model.ImageFit == ImageFit.Stretch)
+        {
+            renderW = Width * zoom;
+            renderH = Height * zoom;
+        }
+        else
+        {
+            var baseScale = _model.ImageFit == ImageFit.Contain
+                ? Math.Min(Width / iw, Height / ih)
+                : Math.Max(Width / iw, Height / ih); // Cover (por defecto)
+            renderW = iw * baseScale * zoom;
+            renderH = ih * baseScale * zoom;
+        }
+
+        double maxOffX = Math.Abs(renderW - Width) / 2.0 / Width;
+        double maxOffY = Math.Abs(renderH - Height) / 2.0 / Height;
+        return new PointD(
+            Math.Clamp(offset.X, -maxOffX, maxOffX),
+            Math.Clamp(offset.Y, -maxOffY, maxOffY));
     }
 
     private void ReloadImage()

@@ -29,6 +29,7 @@
         <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveDocumentAsCommand}" />
         <KeyBinding Key="P" Modifiers="Control" Command="{Binding PrintDocumentCommand}" />
         <KeyBinding Key="Delete" Command="{Binding DeleteSelectedCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding ExitAdjustImageModeCommand}" />
         <KeyBinding Key="C" Modifiers="Control" Command="{Binding CopyCommand}" />
         <KeyBinding Key="X" Modifiers="Control" Command="{Binding CutCommand}" />
         <KeyBinding Key="V" Modifiers="Control" Command="{Binding PasteCommand}" />
@@ -156,6 +157,13 @@
                         ToolTip="Rotate the image 90° left" />
                 <Button Content="⟳" Command="{Binding RotateImageCommand}" CommandParameter="Right"
                         ToolTip="Rotate the image 90° right" />
+                <Separator />
+                <ToggleButton Content="🔍 Adjust"
+                              IsChecked="{Binding IsAdjustImageMode}"
+                              IsEnabled="{Binding HasSingleSelection}"
+                              ToolTip="Adjust image inside the frame: drag to pan, wheel or corner handles to zoom (Esc to exit). Also works with Alt+drag / Alt+wheel." />
+                <Button Content="↺ Reset" Command="{Binding ResetImageTransformCommand}"
+                        ToolTip="Reset the image framing (zoom 100%, centered)" />
                 <TextBlock Text="Fit:" VerticalAlignment="Center" Margin="6,0,2,0" />
                 <ComboBox Width="90" VerticalAlignment="Center"
                           ItemsSource="{Binding ImageFits}"
@@ -369,6 +377,13 @@
                         <StackPanel Orientation="Horizontal">
                             <Button Content="Import" Command="{Binding ImportImageCommand}" Margin="0,0,4,0" />
                             <Button Content="Remove" Command="{Binding RemoveImageCommand}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <ToggleButton Content="Adjust" IsChecked="{Binding IsAdjustImageMode}"
+                                          IsEnabled="{Binding HasSingleSelection}" Margin="0,0,4,0"
+                                          ToolTip="Adjust image inside the frame: drag to pan, wheel or corner handles to zoom (Esc to exit)" />
+                            <Button Content="Reset frame" Command="{Binding ResetImageTransformCommand}"
+                                    ToolTip="Reset the image framing (zoom 100%, centered)" />
                         </StackPanel>
                         <TextBlock Text="Fit" Margin="0,8,0,2" />
                         <ComboBox ItemsSource="{Binding ImageFits}" SelectedItem="{Binding SelectedImageFit}"

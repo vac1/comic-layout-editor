@@ -191,6 +191,52 @@ public partial class PageCanvasControl : UserControl
         }
     }
 
+    // ---- Soltar imagen desde disco en zona vacía: crea una viñeta que la aloja ----
+
+    private static readonly string[] ImageExtensions =
+        { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
+
+    private void PageSurface_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = Editor?.CurrentPage is not null && TryGetImageFile(e, out _)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void PageSurface_Drop(object sender, DragEventArgs e)
+    {
+        if (Editor is not { CurrentPage: not null } editor || !TryGetImageFile(e, out var file))
+        {
+            return;
+        }
+
+        var p = e.GetPosition(PageRoot);
+        editor.CreatePanelWithImage(p.X, p.Y, file);
+        e.Handled = true;
+    }
+
+    private static bool TryGetImageFile(DragEventArgs e, out string file)
+    {
+        file = string.Empty;
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)
+            || e.Data.GetData(DataFormats.FileDrop) is not string[] files)
+        {
+            return false;
+        }
+
+        foreach (var candidate in files)
+        {
+            var ext = System.IO.Path.GetExtension(candidate);
+            if (ImageExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+            {
+                file = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control || Editor is null)
